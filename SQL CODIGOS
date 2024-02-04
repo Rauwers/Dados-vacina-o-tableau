@@ -1,0 +1,125 @@
+CREATE TABLE condicoes (
+INICIO DATE
+,FIM DATE
+,PACIENTE VARCHAR(1000)
+,ATENDIMENTO VARCHAR(1000)
+,CODIGO VARCHAR(1000)
+,DESCRICAO VARCHAR(200)
+);
+
+CREATE TABLE atendimentos (
+ Id VARCHAR(100)
+,INICIO TIMESTAMP
+,FIM TIMESTAMP
+,PACIENTE VARCHAR(100)
+,ORGANIZACAO VARCHAR(100)
+,PROVEDOR VARCHAR(100)
+,PAGADOR VARCHAR(100)
+,CLASSE_ATENDIMENTO VARCHAR(100)
+,CODIGO VARCHAR(100)
+,DESCRICAO VARCHAR(100)
+,CUSTO_BASE_ATENDIMENTO FLOAT
+,CUSTO_TOTAL_REIVINDICACAO FLOAT
+,COBERTURA_PAGADOR FLOAT
+,CODIGO_RAZAO VARCHAR(100)
+--,DESCRICAO_RAZAO VARCHAR(100)
+);
+
+CREATE TABLE imunizacoes
+(
+ DATA TIMESTAMP
+,PACIENTE varchar(100)
+,ATENDIMENTO varchar(100)
+,CODIGO int
+,DESCRICAO varchar(500)
+--,CUSTO_BASE float
+);
+
+CREATE TABLE pacientes
+(
+ Id VARCHAR(100)
+,DATANASCIMENTO date
+,DATAMORTE date
+,CPF VARCHAR(100)
+,CNH VARCHAR(100)
+,PASSAPORTE VARCHAR(100)
+,PREFIXO VARCHAR(100)
+,NOME VARCHAR(100)
+,SOBRENOME VARCHAR(100)
+,SUFIXO VARCHAR(100)
+,NOME_DE_SOLTEIRA VARCHAR(100)
+,ESTADOCIVIL VARCHAR(100)
+,RACA VARCHAR(100)
+,ETNIA VARCHAR(100)
+,GENERO VARCHAR(100)
+,LOCALNASCIMENTO VARCHAR(100)
+,ENDERECO VARCHAR(100)
+,CIDADE VARCHAR(100)
+,ESTADO VARCHAR(100)
+,CONDADO VARCHAR(100)
+,FIPS INT 
+,CEP INT
+,LAT float
+,LON float
+,DESPESAS_SAUDE float
+,COBERTURA_SAUDE float
+,RENDA int
+,MRN int
+);
+
+
+
+
+
+
+
+
+Codigos para arquivo csv
+
+WITH pacientes_ativos AS
+(
+    SELECT DISTINCT paciente
+    FROM atendimentos AS a
+    JOIN pacientes AS p
+        ON a.paciente = p.id
+    WHERE inicio BETWEEN '2020-01-01 00:00' AND '2022-12-31 23:59'
+        AND p.datamorte IS NULL
+        AND EXTRACT(MONTH FROM AGE('2022-12-31', p.datanascimento)) >= 6
+    /* Talvez seja mais adequado usar a linha abaixo, já que a acima está incorreta. 
+       No entanto, ao fazer isso, seus resultados serão um pouco diferentes do tutorial. */
+    /* EXTRACT(EPOCH FROM AGE('2022-12-31', p.datanascimento)) / 2592000 */
+),
+
+vacina_gripe_2022 AS
+(
+    SELECT paciente, MIN(data) AS primeira_vacina_gripe_2022 
+    FROM imunizacoes
+    WHERE codigo = '5302'
+        AND data BETWEEN '2022-01-01 00:00' AND '2022-12-31 23:59'
+    GROUP BY paciente
+)
+
+SELECT p.datanascimento
+      ,p.raca
+	  ,p.condado
+	  ,p.id
+	  ,p.nome
+	  ,p.sobrenome
+	  ,p.genero
+	  ,EXTRACT(YEAR FROM AGE('2022-12-31', datanascimento)) AS idade
+	  ,vg2022.primeira_vacina_gripe_2022
+	  ,vg2022.paciente
+	  ,CASE WHEN vg2022.paciente IS NOT NULL THEN 1 
+	        ELSE 0
+	   END AS vacina_gripe_2022
+FROM pacientes AS p
+LEFT JOIN vacina_gripe_2022 AS vg2022
+    ON p.id = vg2022.paciente
+WHERE 1=1
+  AND p.id IN (SELECT paciente FROM pacientes_ativos);
+
+
+
+
+
+
